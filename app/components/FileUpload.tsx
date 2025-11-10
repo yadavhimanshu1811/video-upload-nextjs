@@ -27,64 +27,70 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
 
   //optional: validation
   const validateFile = (file: File) => {
+    console.log(file);
     if (fileType === "video") {
       if (!file.type.startsWith("video/")) {
-        setError("Invalid file type");
+        setError("Invalid file type !");
       }
+    }else {
+        setError("Invalid file type");
+        return false;
     }
     if (file.size > 100 * 1024 * 1024) {
-      setError("File sixe more than 100 mb");
+      setError("File size more than 100 mb");
+      return false;
     }
     return true;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const file = e.target.files?.[0];
+  if (!file || !validateFile(file)) return;
 
-    if (!file || !validateFile(file)) {
-      return;
-    }
+  setUploading(true);
+  setError(null);
 
-    setUploading(true);
-    setError(null);
+  try {
+    const authResponse = await fetch("/api/auth/imagekit-auth");
+    const auth = await authResponse.json();
 
-    try {
-      const authResponse = await fetch("/api/auth/imagekit-auth");
-      const auth = await authResponse.json();
+    console.log("Auth parameters:", auth);
 
-      const res = await upload({
-        file,
-        fileName: file.name,
-        expire: auth.expire,
-        token: auth.token,
-        signature: auth.signature,
-        publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY!,
+    const res = await upload({
+      file,
+      fileName: file.name,
+      expire: auth.expire,
+      token: auth.token,
+      signature: auth.signature,
+      publicKey: auth.publicKey, // ✅ use from backend
+    //   urlEndpoint: auth.urlEndpoint, // ✅ optional but clean
+      onProgress: (event) => {
+        if (event.lengthComputable && onProgress) {
+          const percent = (event.loaded / event.total) * 100;
+          onProgress(Math.round(percent));
+        }
+      },
+    });
 
-        onProgress: (event) => {
-          // Progress callback to update upload progress state
-          if (event.lengthComputable && onProgress) {
-            const percent = (event.loaded / event.total) * 100;
-            onProgress(Math.round(percent));
-          }
-        },
-        // abortSignal: abortController.signal, // Abort signal to allow cancellation of the upload if needed.
-      });
-      onSuccess(res);
-    } catch (error) {
-      console.error("Upload failed", error);
-    } finally {
-      setUploading(false);
-    }
-  };
+    console.log("Upload response:", res);
+    onSuccess(res);
+  } catch (error) {
+    console.error("Upload failed:", error);
+    setError("Upload failed — check console");
+  } finally {
+    setUploading(false);
+  }
+};
 
   return (
     <>
       <input
         type="file"
-        accept={fileType === "video" ? "video/*" : "image/*"}
+        // accept={fileType === "video" ? "video/*" : "image/*"}
         onChange={handleFileChange}
       />
       {uploading && <span>Loading . . .</span>}
+      <p>Error: {error}</p>
     </>
   );
 };
