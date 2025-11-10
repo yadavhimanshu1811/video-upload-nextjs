@@ -12,7 +12,7 @@ export async function POST(request: NextRequest){
         }
         await connectToDatabase();
 
-        const existingUser = await User.findOne(email);
+        const existingUser = await User.findOne({email});
         if(existingUser){
             return NextResponse.json({error: "This email is already registered"}, {status:400})
         }
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest){
         return NextResponse.json({message: "User registered successfully"}, {status:200})
 
     } catch(error){
-        console.error("Registration error")
+        console.error("Registration error", error)
         return NextResponse.json({error: "Failed to register user"}, {status:400})
     }
 }

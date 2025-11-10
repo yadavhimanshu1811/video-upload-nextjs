@@ -18,14 +18,13 @@ export async function connectToDatabase(){
     }
     if(!cached.promise){
 
-        //for paid plan
-        const options = {} 
-        // const options = {
-        //     bufferCommands: true
-        // } 
+        const opts = {
+            bufferCommands: true,
+            dbName: "video-upload-project", // ✅ Specify your database name explicitly
+        };
 
         mongoose
-        .connect(MONGODB_URI, options)
+        .connect(MONGODB_URI, opts)
         .then(()=> mongoose.connection)
     }
 
